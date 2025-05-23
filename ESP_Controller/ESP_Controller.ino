@@ -7,8 +7,8 @@
 
 CRGB leds[NUM_LEDS];
 
-uint8_t brightness = 128;
-String colorMode = "white";  // Options: white, red, orange, blue
+uint8_t brightness = 128;  // default brightness
+CRGB selectedColor = CRGB::White;  // default color
 String vizMode = "solid";    // Options: solid, greenred
 
 WebServer server(80);
@@ -20,18 +20,10 @@ uint8_t gamma8(uint8_t b) {
   return (uint8_t)(corrected * 255.0 + 0.5);
 }
 
-CRGB getColorFromMode(String mode) {
-  if (mode == "red") return CRGB::Red;
-  if (mode == "orange") return CRGB::Orange;
-  if (mode == "blue") return CRGB::Blue;
-  return CRGB::White;
-}
-
 void applyLEDs() {
   uint8_t correctedBrightness = gamma8(brightness);
-  CRGB color = getColorFromMode(colorMode);
   for (int i = 0; i < NUM_LEDS; i++) {
-    leds[i] = color;
+    leds[i] = selectedColor;
     leds[i].nscale8(correctedBrightness);
   }
   FastLED.show();
@@ -44,20 +36,18 @@ void handleRoot() {
     <body style='font-family:sans-serif;'>
       <h2>ESP32 LED Control</h2>
       <form action='/set'>
-        <label>Color:</label>
-        <select name='color'>
-          <option value='white'>White</option>
-          <option value='red'>Red</option>
-          <option value='orange'>Orange</option>
-          <option value='blue'>Blue</option>
-        </select><br><br>
-        <label>Visualizer Mode:</label>
-        <select name='mode'>
+        <label for='color'>Color:</label>
+        <input type='color' id='color' name='color' value='#ffffff'><br><br>
+
+        <label for='mode'>Visualizer Mode:</label>
+        <select id='mode' name='mode'>
           <option value='solid'>Solid</option>
           <option value='greenred'>Green to Red</option>
         </select><br><br>
+
         <label for='brightness'>Brightness:</label>
         <input type='range' id='brightness' name='brightness' min='0' max='255' value='128'><br><br>
+
         <input type='submit' value='Apply'>
       </form>
     </body></html>
@@ -67,7 +57,11 @@ void handleRoot() {
 }
 
 void handleSet() {
-  if (server.hasArg("color")) colorMode = server.arg("color");
+  if (server.hasArg("color")) {
+    String hex = server.arg("color");  // Format: #RRGGBB
+    long rgb = strtol(&hex[1], NULL, 16);
+    selectedColor = CRGB((rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF);
+  }
   if (server.hasArg("mode")) vizMode = server.arg("mode");
   if (server.hasArg("brightness")) brightness = server.arg("brightness").toInt();
 
@@ -102,11 +96,10 @@ void loop() {
       uint8_t corrected = gamma8(inputVal);
 
       if (vizMode == "solid") {
-        CRGB color = getColorFromMode(colorMode);
-        leds[i] = color;
+        leds[i] = selectedColor;
         leds[i].nscale8(corrected);
       } else if (vizMode == "greenred") {
-        leds[i] = CHSV(map(corrected, 0, 255, 96, 0), 255, corrected); // Green to red
+        leds[i] = CHSV(map(corrected, 0, 255, 96, 0), 255, corrected);
       }
     }
     FastLED.show();
