@@ -43,10 +43,14 @@ void applyLEDs() {
   FastLED.show();
 }
 
+
 void handleRoot() {
   String html = R"rawliteral(
     <!DOCTYPE html><html>
-    <head><title>ESP32 LED Control</title></head>
+    <head>
+      <title>ESP32 LED Control</title>
+      <meta name="viewport" content="width=device-width, initial-scale=1">
+    </head>
     <body style='font-family:sans-serif;'>
       <h2>ESP32 LED Control</h2>
       <form action='/set'>
@@ -70,6 +74,7 @@ void handleRoot() {
 
   server.send(200, "text/html", html);
 }
+
 
 void handleSet() {
   if (server.hasArg("color")) {
