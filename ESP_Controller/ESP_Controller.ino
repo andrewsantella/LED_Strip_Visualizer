@@ -9,7 +9,7 @@ CRGB leds[NUM_LEDS];
 
 uint8_t brightness = 128;  // default brightness
 CRGB selectedColor = CRGB::White;  // default color
-String vizMode = "solid";    // Options: solid, greenred
+String vizMode = "solid";    // Options: solid, greenred, rainbow
 
 WebServer server(80);
 
@@ -22,10 +22,24 @@ uint8_t gamma8(uint8_t b) {
 
 void applyLEDs() {
   uint8_t correctedBrightness = gamma8(brightness);
-  for (int i = 0; i < NUM_LEDS; i++) {
-    leds[i] = selectedColor;
-    leds[i].nscale8(correctedBrightness);
+
+  if (vizMode == "solid") {
+    for (int i = 0; i < NUM_LEDS; i++) {
+      leds[i] = selectedColor;
+      leds[i].nscale8(correctedBrightness);
+    }
+  } else if (vizMode == "greenred") {
+    for (int i = 0; i < NUM_LEDS; i++) {
+      // brightness is scaled per LED by inputVal, so here just max brightness
+      leds[i] = CHSV(map(correctedBrightness, 0, 255, 96, 0), 255, correctedBrightness);
+    }
+  } else if (vizMode == "rainbow") {
+    for (int i = 0; i < NUM_LEDS; i++) {
+      uint8_t hue = map(i, 0, NUM_LEDS - 1, 0, 255);
+      leds[i] = CHSV(hue, 255, correctedBrightness);
+    }
   }
+
   FastLED.show();
 }
 
@@ -43,6 +57,7 @@ void handleRoot() {
         <select id='mode' name='mode'>
           <option value='solid'>Solid</option>
           <option value='greenred'>Green to Red</option>
+          <option value='rainbow'>Rainbow Spectrum</option>
         </select><br><br>
 
         <label for='brightness'>Brightness:</label>
@@ -100,6 +115,9 @@ void loop() {
         leds[i].nscale8(corrected);
       } else if (vizMode == "greenred") {
         leds[i] = CHSV(map(corrected, 0, 255, 96, 0), 255, corrected);
+      } else if (vizMode == "rainbow") {
+        uint8_t hue = map(i, 0, NUM_LEDS - 1, 0, 255);
+        leds[i] = CHSV(hue, 255, corrected);
       }
     }
     FastLED.show();
