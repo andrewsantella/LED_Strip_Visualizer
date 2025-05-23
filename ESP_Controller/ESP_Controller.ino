@@ -103,5 +103,5 @@ void loop() {
     FastLED.show();
   }
 
-  //server.handleClient();
+  server.handleClient();
 }
