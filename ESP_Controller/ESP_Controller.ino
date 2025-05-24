@@ -138,14 +138,14 @@ void handleRoot() {
           <label for="staticEffect">Static Effect:</label>
           <select id="staticEffect" name="staticEffect" onchange="toggleOptions()">
             <option value="colorWheel">Color Wheel</option>
-            <option value="rainbow">Rainbow</option>
+            <option value="rainbow">Static Rainbow</option>
             <option value="chasingRainbow">Chasing Rainbow</option>
           </select><br><br>
 
           <label for="speed" id="speedLabel" style="display:none;">Chasing Rainbow Speed:</label>
           <input type="range" id="speed" name="speed" min="1" max="20" value="3" style="display:none;"><br><br>
 
-          <label for="colorStatic">Static Color (wheel):</label>
+          <label for="colorStatic">Static Color:</label>
           <input type="color" id="colorStatic" name="colorStatic" value="#ffffff"><br><br>
         </div>
 
