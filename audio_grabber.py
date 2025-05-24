@@ -5,7 +5,7 @@ import os
 import serial
 
 # Configuration
-NUM_BARS = 55
+NUM_BARS = 120
 SAMPLE_RATE = 44100
 FFT_SIZE = 1024
 SILENCE_THRESHOLD = 1e-4
@@ -18,8 +18,8 @@ MAX_FREQ = 3000     # Hz
 SENSITIVITY = 1.0   # 1.0 = normal, increase to amplify, decrease to reduce
 
 # Smoothing parameters
-ATTACK_RATE = 0.8
-DECAY_RATE = 0.2
+ATTACK_RATE = 0.5
+DECAY_RATE = 0.15
 
 # Serial configuration
 SERIAL_PORT = 'COM3'  # Change to your ESP32 serial port
