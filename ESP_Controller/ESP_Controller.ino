@@ -54,9 +54,9 @@ void applyLEDs() {
     } else if (staticEffect == "staticRainbow") {
       showStaticRainbow();
     } 
-    // chasingRainbow is animated continuously in loop()
+    // chasingRainbow animated in loop()
   }
-  // Visualizer mode LEDs update in loop()
+  // Visualizer LEDs updated in loop()
 }
 
 void handleRoot() {
@@ -65,23 +65,26 @@ void handleRoot() {
     <head><title>ESP32 LED Control</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.5, user-scalable=no">
     <script>
-      function toggleStaticOptions() {
+      function toggleOptions() {
         var mainMode = document.getElementById('mainMode').value;
         var staticOpts = document.getElementById('staticOptions');
+        var vizOpts = document.getElementById('vizOptions');
         if(mainMode === 'static') {
           staticOpts.style.display = 'block';
+          vizOpts.style.display = 'none';
         } else {
           staticOpts.style.display = 'none';
+          vizOpts.style.display = 'block';
         }
       }
-      window.onload = toggleStaticOptions;
+      window.onload = toggleOptions;
     </script>
     </head>
     <body style='font-family:sans-serif;'>
       <h2>ESP32 LED Control</h2>
       <form action='/set'>
         <label for='mainMode'>Mode:</label>
-        <select id='mainMode' name='mainMode' onchange='toggleStaticOptions()'>
+        <select id='mainMode' name='mainMode' onchange='toggleOptions()'>
           <option value='visualizer'>Visualizer</option>
           <option value='static'>Static</option>
         </select><br><br>
@@ -98,11 +101,13 @@ void handleRoot() {
           </select><br><br>
         </div>
 
-        <label for='vizMode'>Visualizer Mode:</label>
-        <select id='vizMode' name='vizMode'>
-          <option value='solid'>Solid</option>
-          <option value='greenred'>Green to Red</option>
-        </select><br><br>
+        <div id='vizOptions' style='display:none;'>
+          <label for='vizMode'>Visualizer Mode:</label>
+          <select id='vizMode' name='vizMode'>
+            <option value='solid'>Solid</option>
+            <option value='greenred'>Green to Red</option>
+          </select><br><br>
+        </div>
 
         <label for='brightness'>Brightness:</label>
         <input type='range' id='brightness' name='brightness' min='0' max='255' value='128'><br><br>
@@ -162,7 +167,7 @@ void loop() {
   if (mainMode == "static") {
     if (staticEffect == "chasingRainbow") {
       showChasingRainbow();
-      delay(50); // adjust animation speed
+      delay(50); // animation speed
     }
   } else if (mainMode == "visualizer") {
     if (Serial.available() >= NUM_LEDS) {
