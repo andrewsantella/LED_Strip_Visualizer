@@ -64,7 +64,7 @@ void handleRoot() {
       <style>
         body { font-family: sans-serif; padding: 10px; max-width: 400px; margin:auto; }
         label { display: inline-block; width: 140px; }
-        input, select { width: 200px; }
+       
         .hidden { display: none; }
       </style>
       <script>
