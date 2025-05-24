@@ -118,6 +118,17 @@ void handleRoot() {
             colorStaticInput.style.display = 'none';
           }
         }
+        function updateInvertedSlider() {
+    const slider = document.getElementById('rainbowWidth');
+    const hiddenInput = document.getElementById('rainbowWidthHidden');
+    hiddenInput.value = 51 - parseInt(slider.value); // Reverse the meaning
+  }
+
+  document.addEventListener("DOMContentLoaded", function() {
+    const slider = document.getElementById('rainbowWidth');
+    slider.addEventListener("input", updateInvertedSlider);
+    updateInvertedSlider(); // run once on load
+  });
       </script>
     </head>
     <body onload="toggleOptions()">
@@ -152,7 +163,9 @@ void handleRoot() {
           <input type="range" id="speed" name="speed" min="1" max="20" value="3" style="display:none;"><br><br>
 
           <label for="rainbowWidth" id="widthLabel" style="display:none;">Rainbow Width:</label>
-          <input type="range" id="rainbowWidth" name="rainbowWidth" min="1" max="50" value="10" style="display:none;"><br><br>
+          <input type="range" id="rainbowWidth" min="1" max="50" value="10" style="display:none;" oninput="this.setAttribute('data-value', 51 - this.value);"><br><br>
+<input type="hidden" id="rainbowWidthHidden" name="rainbowWidth" value="10">
+
 
           <label for="colorStatic">Static Color:</label>
           <input type="color" id="colorStatic" name="colorStatic" value="#ffffff"><br><br>
@@ -206,6 +219,16 @@ void handleSet() {
   server.send(303);
 }
 
+
+void showChasingRainbow() {
+  uint8_t correctedBrightness = gamma8(brightness);
+  for (int i = 0; i < NUM_LEDS; i++) {
+    leds[i] = CHSV((i * rainbowWidth + chasePos) % 255, 255, correctedBrightness);
+  }
+  FastLED.show();
+  chasePos += chaseSpeed;
+}
+
 void setup() {
   delay(1000);
   FastLED.addLeds<WS2812, DATA_PIN, GRB>(leds, NUM_LEDS);
@@ -253,13 +276,4 @@ void loop() {
       delay(30);
     }
   }
-}
-
-void showChasingRainbow() {
-  uint8_t correctedBrightness = gamma8(brightness);
-  for (int i = 0; i < NUM_LEDS; i++) {
-    leds[i] = CHSV((i * rainbowWidth + chasePos) % 255, 255, correctedBrightness);
-  }
-  FastLED.show();
-  chasePos += chaseSpeed;
 }
