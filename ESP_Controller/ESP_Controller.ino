@@ -8,113 +8,136 @@
 CRGB leds[NUM_LEDS];
 
 uint8_t brightness = 128;  // default brightness
-CRGB selectedColor = CRGB::White;  // default color
-
-String mainMode = "visualizer";  // visualizer or static
-String staticEffect = "colorwheel";  // static effect options
-String vizMode = "solid";    // visualizer mode options
+CRGB selectedColor = CRGB::White;  // default color for visualizer/static color wheel
+String mainMode = "visualizer"; // visualizer or static
+String vizMode = "solid";       // visualizer modes: solid, greenred
+String staticEffect = "colorWheel"; // static effects: colorWheel, rainbow, chasingRainbow
+uint8_t chaseSpeed = 3;         // speed for chasing rainbow
 
 WebServer server(80);
 
-// Gamma correction function
 uint8_t gamma8(uint8_t b) {
   float normalized = b / 255.0;
   float corrected = pow(normalized, 2.2);
   return (uint8_t)(corrected * 255.0 + 0.5);
 }
 
-void showStaticRainbow() {
-  uint8_t correctedBrightness = gamma8(brightness);
-  for (int i = 0; i < NUM_LEDS; i++) {
-    leds[i] = CHSV(map(i, 0, NUM_LEDS - 1, 0, 255), 255, correctedBrightness);
-  }
-  FastLED.show();
-}
-
-uint8_t chasePos = 0;
-
-void showChasingRainbow() {
-  uint8_t correctedBrightness = gamma8(brightness);
-  for (int i = 0; i < NUM_LEDS; i++) {
-    leds[i] = CHSV((i * 10 + chasePos) % 255, 255, correctedBrightness);
-  }
-  FastLED.show();
-  chasePos += 3;  // speed of chasing
-}
+int chasePos = 0;
 
 void applyLEDs() {
-  if (mainMode == "static") {
-    if (staticEffect == "colorwheel") {
-      uint8_t correctedBrightness = gamma8(brightness);
+  uint8_t correctedBrightness = gamma8(brightness);
+
+  if (mainMode == "visualizer") {
+    // Visualizer uses serial input in loop() - so just show selected color here as fallback
+    for (int i = 0; i < NUM_LEDS; i++) {
+      leds[i] = selectedColor;
+      leds[i].nscale8(correctedBrightness);
+    }
+    FastLED.show();
+  } else {
+    // Static mode: apply chosen static effect
+    if (staticEffect == "colorWheel") {
       for (int i = 0; i < NUM_LEDS; i++) {
         leds[i] = selectedColor;
         leds[i].nscale8(correctedBrightness);
       }
-      FastLED.show();
-    } else if (staticEffect == "staticRainbow") {
-      showStaticRainbow();
-    } 
-    // chasingRainbow animated in loop()
+    } else if (staticEffect == "rainbow") {
+      for (int i = 0; i < NUM_LEDS; i++) {
+        leds[i] = CHSV((i * 255) / NUM_LEDS, 255, correctedBrightness);
+      }
+    } else if (staticEffect == "chasingRainbow") {
+      for (int i = 0; i < NUM_LEDS; i++) {
+        leds[i] = CHSV((i * 10 + chasePos) % 255, 255, correctedBrightness);
+      }
+      chasePos += chaseSpeed;
+    }
+    FastLED.show();
   }
-  // Visualizer LEDs updated in loop()
 }
 
 void handleRoot() {
   String html = R"rawliteral(
     <!DOCTYPE html><html>
-    <head><title>ESP32 LED Control</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.5, user-scalable=no">
-    <script>
-      function toggleOptions() {
-        var mainMode = document.getElementById('mainMode').value;
-        var staticOpts = document.getElementById('staticOptions');
-        var vizOpts = document.getElementById('vizOptions');
-        if(mainMode === 'static') {
-          staticOpts.style.display = 'block';
-          vizOpts.style.display = 'none';
-        } else {
-          staticOpts.style.display = 'none';
-          vizOpts.style.display = 'block';
+    <head>
+      <title>ESP32 LED Control</title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <style>
+        body { font-family: sans-serif; padding: 10px; max-width: 400px; margin:auto; }
+        label { display: inline-block; width: 140px; }
+        input, select { width: 200px; }
+        .hidden { display: none; }
+      </style>
+      <script>
+        function toggleOptions() {
+          var mainMode = document.getElementById('mainMode').value;
+          var staticOpts = document.getElementById('staticOptions');
+          var vizOpts = document.getElementById('vizOptions');
+          var staticEffect = document.getElementById('staticEffect').value;
+          var speedLabel = document.getElementById('speedLabel');
+          var speedSlider = document.getElementById('speed');
+
+          if(mainMode === 'static') {
+            staticOpts.style.display = 'block';
+            vizOpts.style.display = 'none';
+
+            if(staticEffect === 'chasingRainbow') {
+              speedLabel.style.display = 'inline-block';
+              speedSlider.style.display = 'inline-block';
+            } else {
+              speedLabel.style.display = 'none';
+              speedSlider.style.display = 'none';
+            }
+          } else {
+            staticOpts.style.display = 'none';
+            vizOpts.style.display = 'block';
+            speedLabel.style.display = 'none';
+            speedSlider.style.display = 'none';
+          }
         }
-      }
-      window.onload = toggleOptions;
-    </script>
+      </script>
     </head>
-    <body style='font-family:sans-serif;'>
+    <body onload="toggleOptions()">
       <h2>ESP32 LED Control</h2>
-      <form action='/set'>
-        <label for='mainMode'>Mode:</label>
-        <select id='mainMode' name='mainMode' onchange='toggleOptions()'>
-          <option value='visualizer'>Visualizer</option>
-          <option value='static'>Static</option>
+      <form action="/set" method="GET">
+        <label for="mainMode">Mode:</label>
+        <select id="mainMode" name="mainMode" onchange="toggleOptions()">
+          <option value="visualizer">Visualizer</option>
+          <option value="static">Static</option>
         </select><br><br>
 
-        <label for='color'>Color:</label>
-        <input type='color' id='color' name='color' value='#ffffff'><br><br>
+        <div id="vizOptions">
+          <label for="color">Color:</label>
+          <input type="color" id="color" name="color" value="#ffffff"><br><br>
 
-        <div id='staticOptions' style='display:none;'>
-          <label for='staticEffect'>Static Effect:</label>
-          <select id='staticEffect' name='staticEffect'>
-            <option value='colorwheel'>Color Wheel</option>
-            <option value='staticRainbow'>Static Rainbow</option>
-            <option value='chasingRainbow'>Chasing Rainbow</option>
+          <label for="vizMode">Visualizer Mode:</label>
+          <select id="vizMode" name="vizMode">
+            <option value="solid">Solid</option>
+            <option value="greenred">Green to Red</option>
           </select><br><br>
         </div>
 
-        <div id='vizOptions' style='display:none;'>
-          <label for='vizMode'>Visualizer Mode:</label>
-          <select id='vizMode' name='vizMode'>
-            <option value='solid'>Solid</option>
-            <option value='greenred'>Green to Red</option>
+        <div id="staticOptions" style="display:none;">
+          <label for="staticEffect">Static Effect:</label>
+          <select id="staticEffect" name="staticEffect" onchange="toggleOptions()">
+            <option value="colorWheel">Color Wheel</option>
+            <option value="rainbow">Rainbow</option>
+            <option value="chasingRainbow">Chasing Rainbow</option>
           </select><br><br>
+
+          <label for="speed" id="speedLabel" style="display:none;">Chasing Rainbow Speed:</label>
+          <input type="range" id="speed" name="speed" min="1" max="20" value="3" style="display:none;"><br><br>
+
+          <label for="colorStatic">Static Color (wheel):</label>
+          <input type="color" id="colorStatic" name="colorStatic" value="#ffffff"><br><br>
         </div>
 
-        <label for='brightness'>Brightness:</label>
-        <input type='range' id='brightness' name='brightness' min='0' max='255' value='128'><br><br>
+        <label for="brightness">Brightness:</label>
+        <input type="range" id="brightness" name="brightness" min="0" max="255" value="128"><br><br>
 
-        <input type='submit' value='Apply'>
+        <input type="submit" value="Apply">
       </form>
-    </body></html>
+    </body>
+    </html>
   )rawliteral";
 
   server.send(200, "text/html", html);
@@ -122,19 +145,24 @@ void handleRoot() {
 
 void handleSet() {
   if (server.hasArg("mainMode")) mainMode = server.arg("mainMode");
-
-  if (server.hasArg("color")) {
-    String hex = server.arg("color");  // Format: #RRGGBB
-    long rgb = strtol(&hex[1], NULL, 16);
-    selectedColor = CRGB((rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF);
-  }
-
-  if (mainMode == "static") {
-    if (server.hasArg("staticEffect")) staticEffect = server.arg("staticEffect");
-  }
-
+  
   if (mainMode == "visualizer") {
+    if (server.hasArg("color")) {
+      String hex = server.arg("color");
+      long rgb = strtol(&hex[1], NULL, 16);
+      selectedColor = CRGB((rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF);
+    }
     if (server.hasArg("vizMode")) vizMode = server.arg("vizMode");
+  } else if (mainMode == "static") {
+    if (server.hasArg("staticEffect")) staticEffect = server.arg("staticEffect");
+    if (staticEffect == "colorWheel" && server.hasArg("colorStatic")) {
+      String hex = server.arg("colorStatic");
+      long rgb = strtol(&hex[1], NULL, 16);
+      selectedColor = CRGB((rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF);
+    }
+    if (staticEffect == "chasingRainbow" && server.hasArg("speed")) {
+      chaseSpeed = constrain(server.arg("speed").toInt(), 1, 20);
+    }
   }
 
   if (server.hasArg("brightness")) brightness = server.arg("brightness").toInt();
@@ -164,12 +192,7 @@ void setup() {
 void loop() {
   server.handleClient();
 
-  if (mainMode == "static") {
-    if (staticEffect == "chasingRainbow") {
-      showChasingRainbow();
-      delay(50); // animation speed
-    }
-  } else if (mainMode == "visualizer") {
+  if (mainMode == "visualizer") {
     if (Serial.available() >= NUM_LEDS) {
       for (int i = 0; i < NUM_LEDS; i++) {
         uint8_t inputVal = Serial.read();
@@ -184,5 +207,20 @@ void loop() {
       }
       FastLED.show();
     }
+  } else {
+    // In static mode, update chasing rainbow animation continuously
+    if (staticEffect == "chasingRainbow") {
+      showChasingRainbow();
+      delay(30);  // Adjust delay for smooth animation speed
+    }
   }
+}
+
+void showChasingRainbow() {
+  uint8_t correctedBrightness = gamma8(brightness);
+  for (int i = 0; i < NUM_LEDS; i++) {
+    leds[i] = CHSV((i * 10 + chasePos) % 255, 255, correctedBrightness);
+  }
+  FastLED.show();
+  chasePos += chaseSpeed;
 }
