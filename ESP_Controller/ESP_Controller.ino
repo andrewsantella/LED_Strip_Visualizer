@@ -9,7 +9,10 @@ CRGB leds[NUM_LEDS];
 
 uint8_t brightness = 128;  // default brightness
 CRGB selectedColor = CRGB::White;  // default color
-String vizMode = "solid";    // Options: solid, greenred, rainbow
+
+String mainMode = "visualizer";  // visualizer or static
+String staticEffect = "colorwheel";  // static effect options
+String vizMode = "solid";    // visualizer mode options
 
 WebServer server(80);
 
@@ -20,48 +23,85 @@ uint8_t gamma8(uint8_t b) {
   return (uint8_t)(corrected * 255.0 + 0.5);
 }
 
-void applyLEDs() {
+void showStaticRainbow() {
   uint8_t correctedBrightness = gamma8(brightness);
-
-  if (vizMode == "solid") {
-    for (int i = 0; i < NUM_LEDS; i++) {
-      leds[i] = selectedColor;
-      leds[i].nscale8(correctedBrightness);
-    }
-  } else if (vizMode == "greenred") {
-    for (int i = 0; i < NUM_LEDS; i++) {
-      // brightness is scaled per LED by inputVal, so here just max brightness
-      leds[i] = CHSV(map(correctedBrightness, 0, 255, 96, 0), 255, correctedBrightness);
-    }
-  } else if (vizMode == "rainbow") {
-    for (int i = 0; i < NUM_LEDS; i++) {
-      uint8_t hue = map(i, 0, NUM_LEDS - 1, 0, 255);
-      leds[i] = CHSV(hue, 255, correctedBrightness);
-    }
+  for (int i = 0; i < NUM_LEDS; i++) {
+    leds[i] = CHSV(map(i, 0, NUM_LEDS - 1, 0, 255), 255, correctedBrightness);
   }
-
   FastLED.show();
 }
 
+uint8_t chasePos = 0;
+
+void showChasingRainbow() {
+  uint8_t correctedBrightness = gamma8(brightness);
+  for (int i = 0; i < NUM_LEDS; i++) {
+    leds[i] = CHSV((i * 10 + chasePos) % 255, 255, correctedBrightness);
+  }
+  FastLED.show();
+  chasePos += 3;  // speed of chasing
+}
+
+void applyLEDs() {
+  if (mainMode == "static") {
+    if (staticEffect == "colorwheel") {
+      uint8_t correctedBrightness = gamma8(brightness);
+      for (int i = 0; i < NUM_LEDS; i++) {
+        leds[i] = selectedColor;
+        leds[i].nscale8(correctedBrightness);
+      }
+      FastLED.show();
+    } else if (staticEffect == "staticRainbow") {
+      showStaticRainbow();
+    } 
+    // chasingRainbow is animated continuously in loop()
+  }
+  // Visualizer mode LEDs update in loop()
+}
 
 void handleRoot() {
   String html = R"rawliteral(
     <!DOCTYPE html><html>
-    <head>
-      <title>ESP32 LED Control</title>
-      <meta name="viewport" content="width=device-width, initial-scale=1">
+    <head><title>ESP32 LED Control</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.5, user-scalable=no">
+    <script>
+      function toggleStaticOptions() {
+        var mainMode = document.getElementById('mainMode').value;
+        var staticOpts = document.getElementById('staticOptions');
+        if(mainMode === 'static') {
+          staticOpts.style.display = 'block';
+        } else {
+          staticOpts.style.display = 'none';
+        }
+      }
+      window.onload = toggleStaticOptions;
+    </script>
     </head>
     <body style='font-family:sans-serif;'>
       <h2>ESP32 LED Control</h2>
       <form action='/set'>
+        <label for='mainMode'>Mode:</label>
+        <select id='mainMode' name='mainMode' onchange='toggleStaticOptions()'>
+          <option value='visualizer'>Visualizer</option>
+          <option value='static'>Static</option>
+        </select><br><br>
+
         <label for='color'>Color:</label>
         <input type='color' id='color' name='color' value='#ffffff'><br><br>
 
-        <label for='mode'>Visualizer Mode:</label>
-        <select id='mode' name='mode'>
+        <div id='staticOptions' style='display:none;'>
+          <label for='staticEffect'>Static Effect:</label>
+          <select id='staticEffect' name='staticEffect'>
+            <option value='colorwheel'>Color Wheel</option>
+            <option value='staticRainbow'>Static Rainbow</option>
+            <option value='chasingRainbow'>Chasing Rainbow</option>
+          </select><br><br>
+        </div>
+
+        <label for='vizMode'>Visualizer Mode:</label>
+        <select id='vizMode' name='vizMode'>
           <option value='solid'>Solid</option>
           <option value='greenred'>Green to Red</option>
-          <option value='rainbow'>Rainbow Spectrum</option>
         </select><br><br>
 
         <label for='brightness'>Brightness:</label>
@@ -75,14 +115,23 @@ void handleRoot() {
   server.send(200, "text/html", html);
 }
 
-
 void handleSet() {
+  if (server.hasArg("mainMode")) mainMode = server.arg("mainMode");
+
   if (server.hasArg("color")) {
     String hex = server.arg("color");  // Format: #RRGGBB
     long rgb = strtol(&hex[1], NULL, 16);
     selectedColor = CRGB((rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF);
   }
-  if (server.hasArg("mode")) vizMode = server.arg("mode");
+
+  if (mainMode == "static") {
+    if (server.hasArg("staticEffect")) staticEffect = server.arg("staticEffect");
+  }
+
+  if (mainMode == "visualizer") {
+    if (server.hasArg("vizMode")) vizMode = server.arg("vizMode");
+  }
+
   if (server.hasArg("brightness")) brightness = server.arg("brightness").toInt();
 
   applyLEDs();
@@ -110,21 +159,25 @@ void setup() {
 void loop() {
   server.handleClient();
 
-  if (Serial.available() >= NUM_LEDS) {
-    for (int i = 0; i < NUM_LEDS; i++) {
-      uint8_t inputVal = Serial.read();
-      uint8_t corrected = gamma8(inputVal);
-
-      if (vizMode == "solid") {
-        leds[i] = selectedColor;
-        leds[i].nscale8(corrected);
-      } else if (vizMode == "greenred") {
-        leds[i] = CHSV(map(corrected, 0, 255, 96, 0), 255, corrected);
-      } else if (vizMode == "rainbow") {
-        uint8_t hue = map(i, 0, NUM_LEDS - 1, 0, 255);
-        leds[i] = CHSV(hue, 255, corrected);
-      }
+  if (mainMode == "static") {
+    if (staticEffect == "chasingRainbow") {
+      showChasingRainbow();
+      delay(50); // adjust animation speed
     }
-    FastLED.show();
+  } else if (mainMode == "visualizer") {
+    if (Serial.available() >= NUM_LEDS) {
+      for (int i = 0; i < NUM_LEDS; i++) {
+        uint8_t inputVal = Serial.read();
+        uint8_t corrected = gamma8(inputVal);
+
+        if (vizMode == "solid") {
+          leds[i] = selectedColor;
+          leds[i].nscale8(corrected);
+        } else if (vizMode == "greenred") {
+          leds[i] = CHSV(map(corrected, 0, 255, 96, 0), 255, corrected);
+        }
+      }
+      FastLED.show();
+    }
   }
 }
