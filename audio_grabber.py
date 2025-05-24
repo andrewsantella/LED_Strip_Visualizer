@@ -5,7 +5,7 @@ import os
 import serial
 
 # Configuration
-NUM_BARS = 50
+NUM_BARS = 55
 SAMPLE_RATE = 44100
 FFT_SIZE = 1024
 SILENCE_THRESHOLD = 1e-4
@@ -23,7 +23,7 @@ DECAY_RATE = 0.2
 
 # Serial configuration
 SERIAL_PORT = 'COM3'  # Change to your ESP32 serial port
-BAUD_RATE = 460800
+BAUD_RATE = 921600
 
 # Global variable to store smoothed magnitudes
 smoothed_magnitudes = np.zeros(NUM_BARS)
