@@ -2,7 +2,7 @@
 #include <FastLED.h>
 #include <WebServer.h>
 
-#define NUM_LEDS 55
+#define NUM_LEDS 120
 #define DATA_PIN 5
 
 CRGB leds[NUM_LEDS];
