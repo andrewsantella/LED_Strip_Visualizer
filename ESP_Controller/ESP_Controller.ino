@@ -7,12 +7,13 @@
 
 CRGB leds[NUM_LEDS];
 
-uint8_t brightness = 128;  // default brightness
+uint8_t brightness = 128;          // default brightness
 CRGB selectedColor = CRGB::White;  // default color for visualizer/static color wheel
-String mainMode = "visualizer"; // visualizer or static
-String vizMode = "solid";       // visualizer modes: solid, greenred
-String staticEffect = "colorWheel"; // static effects: colorWheel, rainbow, chasingRainbow
-uint8_t chaseSpeed = 3;         // speed for chasing rainbow
+String lastMainMode = "";
+String mainMode = "visualizer";      // visualizer or static
+String vizMode = "solid";            // visualizer modes: solid, greenred
+String staticEffect = "colorWheel";  // static effects: colorWheel, rainbow, chasingRainbow
+uint8_t chaseSpeed = 3;              // speed for chasing rainbow
 
 WebServer server(80);
 
@@ -69,31 +70,48 @@ void handleRoot() {
       </style>
       <script>
         function toggleOptions() {
-          var mainMode = document.getElementById('mainMode').value;
-          var staticOpts = document.getElementById('staticOptions');
-          var vizOpts = document.getElementById('vizOptions');
-          var staticEffect = document.getElementById('staticEffect').value;
-          var speedLabel = document.getElementById('speedLabel');
-          var speedSlider = document.getElementById('speed');
+  var mainMode = document.getElementById('mainMode').value;
+  var staticOpts = document.getElementById('staticOptions');
+  var vizOpts = document.getElementById('vizOptions');
+  var staticEffect = document.getElementById('staticEffect').value;
+  var speedLabel = document.getElementById('speedLabel');
+  var speedSlider = document.getElementById('speed');
 
-          if(mainMode === 'static') {
-            staticOpts.style.display = 'block';
-            vizOpts.style.display = 'none';
+  var colorStaticLabel = document.querySelector("label[for='colorStatic']");
+  var colorStaticInput = document.getElementById('colorStatic');
 
-            if(staticEffect === 'chasingRainbow') {
-              speedLabel.style.display = 'inline-block';
-              speedSlider.style.display = 'inline-block';
-            } else {
-              speedLabel.style.display = 'none';
-              speedSlider.style.display = 'none';
-            }
-          } else {
-            staticOpts.style.display = 'none';
-            vizOpts.style.display = 'block';
-            speedLabel.style.display = 'none';
-            speedSlider.style.display = 'none';
-          }
-        }
+  if(mainMode === 'static') {
+    staticOpts.style.display = 'block';
+    vizOpts.style.display = 'none';
+
+    // Show or hide speed slider
+    if(staticEffect === 'chasingRainbow') {
+      speedLabel.style.display = 'inline-block';
+      speedSlider.style.display = 'inline-block';
+    } else {
+      speedLabel.style.display = 'none';
+      speedSlider.style.display = 'none';
+    }
+
+    // Show or hide static color picker
+    if (staticEffect === 'colorWheel') {
+      colorStaticLabel.style.display = 'inline-block';
+      colorStaticInput.style.display = 'inline-block';
+    } else {
+      colorStaticLabel.style.display = 'none';
+      colorStaticInput.style.display = 'none';
+    }
+
+  } else {
+    staticOpts.style.display = 'none';
+    vizOpts.style.display = 'block';
+    speedLabel.style.display = 'none';
+    speedSlider.style.display = 'none';
+    colorStaticLabel.style.display = 'none';
+    colorStaticInput.style.display = 'none';
+  }
+}
+
       </script>
     </head>
     <body onload="toggleOptions()">
@@ -145,7 +163,7 @@ void handleRoot() {
 
 void handleSet() {
   if (server.hasArg("mainMode")) mainMode = server.arg("mainMode");
-  
+
   if (mainMode == "visualizer") {
     if (server.hasArg("color")) {
       String hex = server.arg("color");
@@ -181,7 +199,7 @@ void setup() {
   delay(250);
   Serial.begin(460800);
   delay(250);
-  while (Serial.available() > 0) Serial.read(); // Clear serial buffer
+  while (Serial.available() > 0) Serial.read();  // Clear serial buffer
 
   WiFi.softAP("ESP32-LED", "12345678");
   server.on("/", handleRoot);
@@ -191,6 +209,14 @@ void setup() {
 
 void loop() {
   server.handleClient();
+
+  // Handle mode transition, we need to flush the Serial buffer before resuming
+  if (mainMode != lastMainMode) {
+    lastMainMode = mainMode;
+    while (Serial.available() > 0) {
+      char t = Serial.read();
+    }
+  }
 
   if (mainMode == "visualizer") {
     if (Serial.available() >= NUM_LEDS) {
@@ -208,13 +234,13 @@ void loop() {
       FastLED.show();
     }
   } else {
-    // In static mode, update chasing rainbow animation continuously
     if (staticEffect == "chasingRainbow") {
       showChasingRainbow();
-      delay(30);  // Adjust delay for smooth animation speed
+      delay(30);
     }
   }
 }
+
 
 void showChasingRainbow() {
   uint8_t correctedBrightness = gamma8(brightness);
