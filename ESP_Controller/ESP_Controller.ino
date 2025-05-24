@@ -257,24 +257,38 @@ void loop() {
   }
 
   if (mainMode == "visualizer") {
-    if (Serial.available() >= NUM_LEDS) {
+    const int numBytes = NUM_LEDS / 2;
+    if (Serial.available() >= numBytes) {
       uint8_t brightnessCorrected = gamma8(brightness);
 
-      for (int i = 0; i < NUM_LEDS; i++) {
-        uint8_t inputVal = Serial.read();
-        uint8_t corrected = gamma8(inputVal);
-        uint8_t finalBrightness = (uint16_t)corrected * brightnessCorrected / 255;
+      for (int i = 0; i < NUM_LEDS; i += 2) {
+        uint8_t packedByte = Serial.read();
+        uint8_t val1 = packedByte >> 4;    // high nibble
+        uint8_t val2 = packedByte & 0x0F;  // low nibble
+
+        uint8_t corrected1 = gamma8(val1 * 17);  // scale 0–15 to 0–255
+        uint8_t corrected2 = gamma8(val2 * 17);
+
+        uint8_t final1 = (uint16_t)corrected1 * brightnessCorrected / 255;
+        uint8_t final2 = (uint16_t)corrected2 * brightnessCorrected / 255;
 
         if (vizMode == "solid") {
           leds[i] = selectedColor;
-          leds[i].nscale8(finalBrightness);
+          leds[i].nscale8(final1);
+          if (i + 1 < NUM_LEDS) {
+            leds[i + 1] = selectedColor;
+            leds[i + 1].nscale8(final2);
+          }
         } else if (vizMode == "greenred") {
-          leds[i] = CHSV(map(finalBrightness, 0, 255, 96, 0), 255, finalBrightness);
+          leds[i] = CHSV(map(final1, 0, 255, 96, 0), 255, final1);
+          if (i + 1 < NUM_LEDS) {
+            leds[i + 1] = CHSV(map(final2, 0, 255, 96, 0), 255, final2);
+          }
         }
       }
+
       FastLED.show();
     }
-
   } else {
     if (staticEffect == "chasingRainbow") {
       showChasingRainbow();
