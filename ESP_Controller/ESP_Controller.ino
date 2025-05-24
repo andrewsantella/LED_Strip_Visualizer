@@ -2,12 +2,12 @@
 #include <FastLED.h>
 #include <WebServer.h>
 
-#define NUM_LEDS 50
+#define NUM_LEDS 55
 #define DATA_PIN 5
 
 CRGB leds[NUM_LEDS];
 
-uint8_t brightness = 128;
+uint8_t brightness = 255;
 CRGB selectedColor = CRGB::White;
 String lastMainMode = "";
 String mainMode = "visualizer";
@@ -235,7 +235,7 @@ void setup() {
   FastLED.clear();
   FastLED.show();
   delay(250);
-  Serial.begin(460800);
+  Serial.begin(921600);
   delay(250);
   while (Serial.available() > 0) Serial.read();
 
