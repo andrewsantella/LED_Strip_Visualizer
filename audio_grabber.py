@@ -5,7 +5,7 @@ import os
 import serial
 
 # Configuration
-NUM_BARS = 120
+NUM_BARS = 150
 SAMPLE_RATE = 44100
 FFT_SIZE = 1024
 SILENCE_THRESHOLD = 1e-4
@@ -15,7 +15,7 @@ MIN_FREQ = 50       # Hz
 MAX_FREQ = 3000     # Hz
 
 # Audio sensitivity scaling (adjust to your system)
-SENSITIVITY = 1.0   # 1.0 = normal, increase to amplify, decrease to reduce
+SENSITIVITY = 3   # Increase this to amplify the LED brightness
 
 # Smoothing parameters
 ATTACK_RATE = 0.5
@@ -39,8 +39,17 @@ except Exception as e:
 def send_to_esp32(data):
     if ser and ser.is_open:
         try:
-            byte_data = bytes([int(val * 255) for val in data])
-            ser.write(byte_data)
+            # Convert magnitudes to 4-bit values (0–15)
+            led_4bit = [min(15, max(0, int(val * 15))) for val in data]
+
+            # Pack two 4-bit values into one byte
+            packed = bytearray()
+            for i in range(0, len(led_4bit), 2):
+                first = led_4bit[i]
+                second = led_4bit[i + 1] if i + 1 < len(led_4bit) else 0
+                packed.append((first << 4) | second)
+
+            ser.write(packed)
         except Exception as e:
             print(f"Error sending to ESP32: {e}")
 
@@ -63,16 +72,18 @@ def audio_callback(indata, frames, time_, status):
         max_bin = int(MAX_FREQ / freq_resolution)
         magnitudes = magnitudes[min_bin:max_bin + 1]
 
-        # Apply sensitivity scaling BEFORE interpolation and normalization
+        # Apply sensitivity scaling
         magnitudes = magnitudes * SENSITIVITY
 
+        # Interpolate to match number of bars
         x_old = np.linspace(0, 1, len(magnitudes))
         x_new = np.linspace(0, 1, NUM_BARS)
         target_magnitudes = np.interp(x_new, x_old, magnitudes)
 
-        max_mag = np.max(target_magnitudes)
-        target_magnitudes = target_magnitudes / max_mag if max_mag > 0 else np.zeros(NUM_BARS)
+        # Clip to keep values in 0–1 range
+        target_magnitudes = np.clip(target_magnitudes, 0, 1.0)
 
+    # Smoothing
     for i in range(NUM_BARS):
         if target_magnitudes[i] > smoothed_magnitudes[i]:
             smoothed_magnitudes[i] = (
