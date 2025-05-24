@@ -173,7 +173,7 @@ void handleRoot() {
         </div>
 
         <label for="brightness">Brightness:</label>
-        <input type="range" id="brightness" name="brightness" min="0" max="255" value="128"><br><br>
+        <input type="range" id="brightness" name="brightness" min="75" max="255" value="255"><br><br>
 
         <input type="submit" value="Apply">
       </form>
@@ -258,19 +258,23 @@ void loop() {
 
   if (mainMode == "visualizer") {
     if (Serial.available() >= NUM_LEDS) {
+      uint8_t brightnessCorrected = gamma8(brightness);
+
       for (int i = 0; i < NUM_LEDS; i++) {
         uint8_t inputVal = Serial.read();
         uint8_t corrected = gamma8(inputVal);
+        uint8_t finalBrightness = (uint16_t)corrected * brightnessCorrected / 255;
 
         if (vizMode == "solid") {
           leds[i] = selectedColor;
-          leds[i].nscale8(corrected);
+          leds[i].nscale8(finalBrightness);
         } else if (vizMode == "greenred") {
-          leds[i] = CHSV(map(corrected, 0, 255, 96, 0), 255, corrected);
+          leds[i] = CHSV(map(finalBrightness, 0, 255, 96, 0), 255, finalBrightness);
         }
       }
       FastLED.show();
     }
+
   } else {
     if (staticEffect == "chasingRainbow") {
       showChasingRainbow();
@@ -278,4 +282,3 @@ void loop() {
     }
   }
 }
-
