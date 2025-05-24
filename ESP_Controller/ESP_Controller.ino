@@ -2,7 +2,7 @@
 #include <FastLED.h>
 #include <WebServer.h>
 
-#define NUM_LEDS 120
+#define NUM_LEDS 150
 #define DATA_PIN 5
 
 CRGB leds[NUM_LEDS];
@@ -163,7 +163,8 @@ void handleRoot() {
           <input type="range" id="speed" name="speed" min="1" max="20" value="3" style="display:none;"><br><br>
 
           <label for="rainbowWidth" id="widthLabel" style="display:none;">Rainbow Width:</label>
-          <input type="range" id="rainbowWidth" min="1" max="50" value="10" style="display:none;" oninput="this.setAttribute('data-value', 51 - this.value);"><br><br>
+          <input type="range" id="rainbowWidth" min="5" max="50" step="5" value="30" style="display:none;" oninput="this.setAttribute('data-value', 51 - this.value);">
+
 <input type="hidden" id="rainbowWidthHidden" name="rainbowWidth" value="10">
 
 
@@ -277,3 +278,4 @@ void loop() {
     }
   }
 }
+
