@@ -110,15 +110,23 @@ void handleRoot() {
             }
 
           } else {
-            staticOpts.style.display = 'none';
-            vizOpts.style.display = 'block';
-            speedLabel.style.display = 'none';
-            speedSlider.style.display = 'none';
-            widthLabel.style.display = 'none';
-            widthSlider.style.display = 'none';
-            colorStaticLabel.style.display = 'none';
-            colorStaticInput.style.display = 'none';
-          }
+  staticOpts.style.display = 'none';
+  vizOpts.style.display = 'block';
+
+  if (document.getElementById('vizMode').value === 'rainbowViz') {
+    widthLabel.style.display = 'inline-block';
+    widthSlider.style.display = 'inline-block';
+  } else {
+    widthLabel.style.display = 'none';
+    widthSlider.style.display = 'none';
+  }
+
+  speedLabel.style.display = 'none';
+  speedSlider.style.display = 'none';
+  colorStaticLabel.style.display = 'none';
+  colorStaticInput.style.display = 'none';
+}
+
         }
         function updateInvertedSlider() {
     const slider = document.getElementById('rainbowWidth');
@@ -147,9 +155,11 @@ void handleRoot() {
           <input type="color" id="color" name="color" value="#ffffff"><br><br>
 
           <label for="vizMode">Visualizer Mode:</label>
-          <select id="vizMode" name="vizMode">
+          <select id="vizMode" name="vizMode" onchange="toggleOptions()">
             <option value="solid">Solid</option>
             <option value="greenred">Green to Red</option>
+            <option value="rainbowViz">Rainbow</option>
+
           </select><br><br>
         </div>
 
@@ -196,6 +206,10 @@ void handleSet() {
       selectedColor = CRGB((rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF);
     }
     if (server.hasArg("vizMode")) vizMode = server.arg("vizMode");
+    if (vizMode == "rainbowViz" && server.hasArg("rainbowWidth")) {
+      rainbowWidth = constrain(server.arg("rainbowWidth").toInt(), 1, 50);
+    }
+
   } else if (mainMode == "static") {
     if (server.hasArg("staticEffect")) staticEffect = server.arg("staticEffect");
 
@@ -283,6 +297,14 @@ void loop() {
           leds[i] = CHSV(map(final1, 0, 255, 96, 0), 255, final1);
           if (i + 1 < NUM_LEDS) {
             leds[i + 1] = CHSV(map(final2, 0, 255, 96, 0), 255, final2);
+          }
+        } else if (vizMode == "rainbowViz") {
+          uint8_t hue1 = (i * rainbowWidth) % 255;
+          uint8_t hue2 = ((i + 1) * rainbowWidth) % 255;
+
+          leds[i] = CHSV(hue1, 255, final1);
+          if (i + 1 < NUM_LEDS) {
+            leds[i + 1] = CHSV(hue2, 255, final2);
           }
         }
       }
