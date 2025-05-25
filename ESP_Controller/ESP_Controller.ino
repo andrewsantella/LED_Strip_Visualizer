@@ -233,13 +233,11 @@ void showChasingRainbow() {
 }
 
 void setup() {
-  delay(1000);
   FastLED.addLeds<WS2812, DATA_PIN, GRB>(leds, NUM_LEDS);
   FastLED.clear();
   FastLED.show();
-  delay(250);
   Serial.begin(921600);
-  delay(250);
+  delay(50);
   while (Serial.available() > 0) Serial.read();
 
   WiFi.softAP("ESP32-LED", "12345678");
