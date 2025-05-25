@@ -15,6 +15,8 @@ String vizMode = "solid";
 String staticEffect = "colorWheel";
 uint8_t chaseSpeed = 3;
 uint8_t rainbowWidth = 10;  // New: rainbow width control
+unsigned long lastChaseUpdate = 0;
+
 
 WebServer server(80);
 
@@ -163,7 +165,7 @@ void handleRoot() {
           <input type="range" id="speed" name="speed" min="1" max="20" value="3" style="display:none;"><br><br>
 
           <label for="rainbowWidth" id="widthLabel" style="display:none;">Rainbow Width:</label>
-          <input type="range" id="rainbowWidth" min="5" max="50" step="5" value="30" style="display:none;" oninput="this.setAttribute('data-value', 51 - this.value);">
+          <input type="range" id="rainbowWidth" min="25" max="50" step="5" value="38" style="display:none;" oninput="this.setAttribute('data-value', 51 - this.value);">
 
 <input type="hidden" id="rainbowWidthHidden" name="rainbowWidth" value="10">
 
@@ -291,8 +293,10 @@ void loop() {
     }
   } else {
     if (staticEffect == "chasingRainbow") {
-      showChasingRainbow();
-      delay(30);
+      if (millis() - lastChaseUpdate >= 30) {
+        showChasingRainbow();
+        lastChaseUpdate = millis();
+      }
     }
   }
 }
