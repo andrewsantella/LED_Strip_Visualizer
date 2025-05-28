@@ -1,6 +1,8 @@
 #include <WiFi.h>
 #include <FastLED.h>
 #include <WebServer.h>
+#include <ESPmDNS.h>
+
 
 #define NUM_LEDS 150
 #define DATA_PIN 5
@@ -267,6 +269,13 @@ void setup() {
   Serial.println();
   Serial.print("Connected! IP address: ");
   Serial.println(WiFi.localIP());
+
+  if (!MDNS.begin("visualizer")) {
+    Serial.println("Error setting up MDNS responder!");
+  } else {
+    Serial.println("mDNS responder started");
+  }
+
 
 
   server.on("/", handleRoot);
