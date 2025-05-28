@@ -5,6 +5,10 @@
 #define NUM_LEDS 150
 #define DATA_PIN 5
 
+const char* ssid = "<SSID>";
+const char* password = "<PASSWORD>";
+
+
 CRGB leds[NUM_LEDS];
 
 uint8_t brightness = 255;
@@ -254,7 +258,17 @@ void setup() {
   delay(50);
   while (Serial.available() > 0) Serial.read();
 
-  WiFi.softAP("ESP32-LED", "12345678");
+  WiFi.begin(ssid, password);
+  Serial.print("Connecting to WiFi...");
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println();
+  Serial.print("Connected! IP address: ");
+  Serial.println(WiFi.localIP());
+
+
   server.on("/", handleRoot);
   server.on("/set", handleSet);
   server.begin();
