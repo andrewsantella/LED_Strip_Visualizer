@@ -15,14 +15,14 @@ MIN_FREQ = 50       # Hz
 MAX_FREQ = 3000     # Hz
 
 # Audio sensitivity scaling (adjust to your system)
-SENSITIVITY = 3   # Increase this to amplify the LED brightness
+SENSITIVITY = 0.1   # Increase this to amplify the LED brightness
 
 # Smoothing parameters
 ATTACK_RATE = 0.5
 DECAY_RATE = 0.15
 
 # Serial configuration
-SERIAL_PORT = 'COM3'  # Change to your ESP32 serial port
+SERIAL_PORT = 'COM7'  # Change to your ESP32 serial port
 BAUD_RATE = 921600
 
 # Global variable to store smoothed magnitudes
