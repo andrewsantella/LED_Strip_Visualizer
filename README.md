@@ -22,3 +22,8 @@
 * Update the run_visualizer.bat file with the file path for audio_grabber.py
 * Create a shortcut for run_visualizer.bat in C:\Users\<USERNAME>\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup
 * Enjoy
+
+
+## Troubleshooting
+
+For systems that do not use the default Realtek(R) Speakers as an audio output, the stereo mix will not pick up desktop audio. My aux output Realtek 2nd Audio Output did not work, so I used Voicemeeter Banana to give virtual audio cables. Set Playback to Voicemeeter Input, Recording to Voicemeeter Out B1, and then configure accordingly in Voicemeeter to route the audio. Since Voicemeeter takes full control of the audio, the Windows audio volume adjustement doesnt work, so [this release](https://github.com/Frosthaven/voicemeeter-windows-volume/releases/) works to bind those together. 
